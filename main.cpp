@@ -1,9 +1,15 @@
+#include <atomic>
 #include <iostream>
 #include <bitset>
+#include <fstream>
 #include <memory>
 #include <stdio.h>
 #include <string>
 #include <utility>
+#include <thread>
+#include <vector>
+#include <mutex>
+#define ret return
 class base
 {
 public:
@@ -16,6 +22,7 @@ public:
 private:
     char symbol;
 };
+
 template<int index>
 class derived : base
 {
@@ -33,10 +40,11 @@ public:
         printf("%c", c);
     }
 };
+
 class diff_base_printer
 {
 public:
-    diff_base_printer(std::bitset<8> bin_symbols)
+    diff_base_printer(std::bitset<8>&& bin_symbols) :hex_code{}
     {
         unsigned char result{};
         int value{};
@@ -79,7 +87,7 @@ public:
     void print_from_hex(std::string&& hex_val)
     {
         uint8_t val{};
-        for (int i = 0; i < hex_val.length(); ++i)
+        for (int i = 0; i < static_cast<int>(hex_val.length()); ++i)
         {
             if (!std::isdigit(hex_val[i]))
             {
@@ -124,23 +132,120 @@ private:
     char hex_code[2];
 };
 
-void* operator new[](std::size_t sz)
+class o_print
 {
-    std::cout << "o world";
+public:
+
+    o_print(unsigned char symbol) : smb(symbol)
+    {
+        {
+            std::ofstream file{ "file.txt" };
+            file << static_cast<char>(smb);
+        }
+        std::ifstream reader{ "file.txt" };
+        std::cout << static_cast<unsigned char>(reader.get());
+    }
+
+private:
+    unsigned char smb;
+};
+
+bool print_smb(int val)
+{
+    static std::atomic<uint8_t> symbol{};
+    while (true)
+    {
+        ++symbol;
+        if (symbol == val)
+        {
+            std::mutex m;
+            m.lock();
+            std::cout << symbol;
+            m.unlock();
+            ret true;
+        }
+        if (symbol > val)
+            ret false;
+    }
+    ret false;
+}
+
+void* operator new[](size_t sz)
+{
+    std::cout << "world";
     if (sz == 0)
         ++sz;
     if (void* ptr = std::malloc(sz))
         return ptr;
-
+    else
+        return nullptr;
 }
+
+class asm_printer
+{
+public:
+
+    asm_printer(int octal_value)
+    {
+        char arr[2] = "!";
+        arr[0] = static_cast<uint8_t>(to_dec(octal_value));
+        __asm
+        {
+            lea eax, arr
+            push eax
+            call printf
+            add esp, 4
+        }
+    }
+
+private:
+
+    int to_dec(int oct_val)
+    {
+        int result{};
+        std::string temp{ std::to_string(oct_val) };
+        if (std::to_string(oct_val).length() > 3 || temp.find('9') != std::string::npos || temp.find('8') != std::string::npos)
+        {
+            exit(0x228);
+        }
+        int degree_to(temp.length() - 1);
+        for (int i = 0; i < static_cast<int>(temp.length()); ++i)
+        {
+            result += (temp[i] - '0') * get_degree(8, degree_to);
+            --degree_to;
+        }
+        ret result;
+    }
+
+    int get_degree(int num, int _degree)
+    {
+        if (_degree)
+        {
+            int saver{ num };
+            for (int i = 1; i < _degree; ++i)
+            {
+                num *= saver;
+            }
+            ret num;
+        }
+        ret 1;
+    }
+};
+
 int main()
 {
-    base b{ std::string{ "ak;hladf" },3 };
+    base b{ std::string{"ak;hladf"},3 };
     b.print();
     derived<101> d;
     d.print();
     diff_base_printer dd(std::move(std::bitset<8>{"00110110"}));
     dd.print_from_hex(std::move(std::string("6C")));
-    int* ptr = new int[2];
-    return 0;
+    o_print obj{ 111 };
+    std::vector<std::jthread> arr_printer;
+    for (int i = 0; i < std::thread::hardware_concurrency(); ++i)
+    {
+        arr_printer.emplace_back(print_smb, 32);
+    }
+    int* ptr = new int[1];
+    asm_printer bbj(41);
 }
