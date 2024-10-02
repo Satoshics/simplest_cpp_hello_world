@@ -3,12 +3,12 @@
 #include <bitset>
 #include <fstream>
 #include <memory>
+#include <mutex>
 #include <stdio.h>
 #include <string>
 #include <utility>
 #include <thread>
 #include <vector>
-#include <mutex>
 #define ret return
 class base
 {
@@ -150,24 +150,18 @@ private:
     unsigned char smb;
 };
 
-bool print_smb(int val)
+void print_smb(int val, std::once_flag& calc_flag)
 {
-    static std::atomic<uint8_t> symbol{};
-    while (true)
+    std::atomic<uint8_t> value_to_print{};
+    while (value_to_print <= val)
     {
-        ++symbol;
-        if (symbol == val)
+        if (value_to_print == val)
         {
-            std::mutex m;
-            m.lock();
-            std::cout << symbol;
-            m.unlock();
-            ret true;
+            std::call_once(calc_flag, [&value_to_print]() { std::cout << value_to_print; });
+            ret;
         }
-        if (symbol > val)
-            ret false;
+        ++value_to_print;
     }
-    ret false;
 }
 
 void* operator new[](size_t sz)
@@ -187,7 +181,7 @@ public:
 
     asm_printer(int octal_value)
     {
-        char arr[2] = "!";
+        char arr[2] = {};
         arr[0] = static_cast<uint8_t>(to_dec(octal_value));
         __asm
         {
@@ -240,11 +234,16 @@ int main()
     d.print();
     diff_base_printer dd(std::move(std::bitset<8>{"00110110"}));
     dd.print_from_hex(std::move(std::string("6C")));
-    o_print obj{ 111 };
-    std::vector<std::jthread> arr_printer;
-    for (int i = 0; i < std::thread::hardware_concurrency(); ++i)
+    o_print obj{111};
     {
-        arr_printer.emplace_back(print_smb, 32);
+        std::vector<std::jthread> arr_printer;
+        int thread_amount = std::thread::hardware_concurrency();
+        arr_printer.reserve(thread_amount);
+        std::once_flag guarantor{};
+        for (int i = 0; i < thread_amount; ++i)
+        {
+            arr_printer.emplace_back(print_smb, 32, std::ref(guarantor));
+        }
     }
     int* ptr = new int[1];
     asm_printer bbj(41);
