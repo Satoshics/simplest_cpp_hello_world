@@ -1,29 +1,5 @@
 #include "headers/classes.hpp"
-
-void print_smb(int val, std::once_flag& calc_flag)
-{
-    std::atomic<uint8_t> value_to_print{};
-    while (value_to_print <= val)
-    {
-        if (value_to_print == val)
-        {
-            std::call_once(calc_flag, [&value_to_print]() { std::cout << value_to_print; });
-            ret;
-        }
-        ++value_to_print;
-    }
-}
-
-void* operator new[](size_t sz)
-{
-    std::cout << "world";
-    if (sz == 0)
-        ++sz;
-    if (void* ptr = std::malloc(sz))
-        return ptr;
-    else
-        return nullptr;
-}
+#include "functions/functions.hpp"
 
 int main()
 {
@@ -44,6 +20,14 @@ int main()
             arr_printer.emplace_back(print_smb, 32, std::ref(guarantor));
         }
     }
+    std::function<void(int8_t)> w_print = [](int8_t value) { std::cout << static_cast<char>(~value); };
+    print_letter<-120>(w_print);
+    short iter{};
+    while (!std::async(std::launch::async, runtime_template_fucntion_call, iter++).get())
+    {
+    }
+    try_printer(1337);
     int* ptr = new int[1];
+    delete[] ptr;
     asm_printer bbj(41);
 }
